@@ -1,0 +1,10 @@
+# Proprietary Canon firmware and locally dumped ROM data.
+# Keep these files locally for analysis, but never commit or publish them.
+firmware-originals/*.FIR
+firmware-originals/*.DAT
+M50-ROM*.bin
+
+# Local card/device artifacts (not needed for the public repository).
+EOS_DIGITAL-original-boot-sector.bin
+card-backup-verification.json
+card-diagnostics-archive-*/

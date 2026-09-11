@@ -1,0 +1,31 @@
+# Canon EOS M50 (1st gen) clean HDMI research
+
+This repository documents a reversible Canon Basic method for removing the autofocus square from the EOS M50 firmware 1.1.0 HDMI feed while retaining live autofocus.
+
+## Validated result
+
+The camera's HDMI OSD layer can be muted at runtime with Canon's internal routines:
+
+```text
+DISP_MuteOnOSDLineVram(0x1000)  @ 0xE0538114
+DISP_MuteOffOSDLineVram(0x1000) @ 0xE053814E
+```
+
+The validated script is `test_hdmi_line_hold.m`. Copy it to an SD card as `extend.m`, keep `script.req` in the card root, and trigger it with Playback → SET. Return to live view to obtain clean HDMI. Power-cycle the camera afterward to restore the normal overlay.
+
+See [WEBCAM-CLEAN-HDMI.md](WEBCAM-CLEAN-HDMI.md) for the user procedure and recovery steps, and [ASSESSMENT.md](ASSESSMENT.md) for the reverse-engineering evidence and limitations.
+
+## Contents
+
+- `firmware-originals/` — local-only copies of the supplied Canon 1.1.0 firmware files; ignored by Git.
+- `M50-ROM0-00000000-00800000.bin` — local-only 8 MiB ROM region read directly from the camera; ignored by Git.
+- `test_hdmi_line_hold.m` — validated one-shot clean-HDMI script.
+- `cbasic_examples/`, `d8_oracle/`, `magiclantern/` — source snapshots used for research.
+- `card-diagnostics-archive-2026-09-11/` — diagnostic outputs retained for provenance.
+- `EOS_DIGITAL-original-boot-sector.bin` and card manifests — card-preparation records.
+
+No firmware image was patched or flashed. The method uses runtime Canon Basic code only. The separate 30 GB photo backup is intentionally not included in this repository. Proprietary firmware and ROM binaries are deliberately excluded from commits; obtain firmware from [Canon's official EOS M50 download page](https://www.canon-europe.com/support/consumer/products/cameras/eos-m/eos-m50.html?type=firmware) and generate ROM dumps locally if needed.
+
+## Integrity
+
+The original firmware hashes and ROM-dump hash are recorded in `ASSESSMENT.md`. Generated research files are retained rather than silently discarded so the investigation is reproducible.
