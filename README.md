@@ -33,3 +33,7 @@ No firmware image was patched or flashed. The method uses runtime Canon Basic co
 ## Integrity
 
 The original firmware hashes and ROM-dump hash are recorded in `ASSESSMENT.md`. Generated research files are retained rather than silently discarded so the investigation is reproducible.
+
+## Licensing
+
+Original scripts, documentation, and analysis code in this repository are released under the MIT License; see [LICENSE](LICENSE). The Canon firmware/ROM files are local-only and excluded from Git. Vendored source snapshots under `magiclantern/`, `cbasic_examples/`, `d8_oracle/`, and `third_party/` retain their original upstream licenses and are not relicensed by this repository.
