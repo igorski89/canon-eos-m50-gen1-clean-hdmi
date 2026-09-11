@@ -13,6 +13,10 @@ The working `extend.m` invokes Canon's own HDMI-Line OSD mute routine at `0xE053
 
 Do not press SET while already in live view; that opens the normal AF menu instead of running the script.
 
+## Card compatibility
+
+Canon Basic launching was verified on the prepared FAT32 card. The same `extend.m` and `script.req` copied to a camera-formatted 256 GB exFAT card did not launch, even though the camera could record normally. The FAT32 card's boot-sector `SCRIPT` marker is required by this setup. Use a FAT32 card; do not apply the FAT32 marker procedure to an exFAT card.
+
 ## Recovery
 
 If HDMI becomes black or the camera appears stuck, power it off and remove the battery for 30 seconds. Reinsert the battery and start once without the card. The script is reversible and does not alter firmware.

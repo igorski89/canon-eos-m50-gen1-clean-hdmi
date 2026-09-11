@@ -88,6 +88,8 @@ The direct Line-only wrapper was invoked from Canon Basic with mute user ID `0x1
 
 A subsequent stateful toggle script was not accepted reliably: it produced no execution marker or state file, and the HDMI capture link went black after SET. The card was immediately reverted to the minimal script. Treat the one-shot Line mute test as the validated method; the toggle wrapper requires further Canon Basic compatibility work.
 
+The test card and a second card also established a media-format dependency. The original 32 GB card was FAT32 and had the `SCRIPT` marker written into its FAT32 boot sector; Canon Basic launched `extend.m` there. A 256 GB card formatted by the camera was exFAT. Copying the identical `extend.m` and `script.req` to that card did not launch the script, although ordinary photo/video recording worked. The preparation helper therefore rejects exFAT deliberately. This behavior should be treated as a requirement of the tested loader path, not as evidence that the script contents differ.
+
 The port enables MMU remapping, which offers a possible route to RAM-backed code changes. It also documents unresolved capture crashes, allocator issues, and disabled hooks. Existing platform support should not be mistaken for a stable webcam solution. The old `clear_lv_afframe()` implementation in `src/tweaks.c` manipulates indexed-color bitmap pixels; it cannot simply be assumed to work with the M50's RGBA compositor.
 
 ## What would establish feasibility more firmly

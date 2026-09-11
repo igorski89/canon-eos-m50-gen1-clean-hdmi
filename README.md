@@ -13,6 +13,10 @@ DISP_MuteOffOSDLineVram(0x1000) @ 0xE053814E
 
 The validated script is `test_hdmi_line_hold.m`. Copy it to an SD card as `extend.m`, keep `script.req` in the card root, and trigger it with Playback → SET. Return to live view to obtain clean HDMI. Power-cycle the camera afterward to restore the normal overlay.
 
+## Card-format requirement
+
+The working card is FAT32 and has the Canon Basic `SCRIPT` marker in its boot sector. A second 256 GB card formatted in-camera as exFAT accepted the same two files but did not launch `extend.m`; the HDMI AF square remained. Shooting photos and videos on that exFAT card worked normally. Thus, file copying alone is not sufficient: use a FAT32 card prepared with the marker. Do not write the FAT32 marker at the FAT32 offset into an exFAT boot sector.
+
 See [WEBCAM-CLEAN-HDMI.md](WEBCAM-CLEAN-HDMI.md) for the user procedure and recovery steps, and [ASSESSMENT.md](ASSESSMENT.md) for the reverse-engineering evidence and limitations.
 
 ## Contents
