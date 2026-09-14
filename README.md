@@ -19,11 +19,33 @@ The working card is FAT32 and has the Canon Basic `SCRIPT` marker in its boot se
 
 See [WEBCAM-CLEAN-HDMI.md](WEBCAM-CLEAN-HDMI.md) for the user procedure and recovery steps, and [ASSESSMENT.md](ASSESSMENT.md) for the reverse-engineering evidence and limitations.
 
+## Display-off limitation
+
+The HDMI overlay routine is a one-shot Canon Basic call. A trace run confirmed
+that it returns normally, but the camera then independently applies its TFT
+`Display off` timeout and the HDMI capture becomes black. Menu settings can
+disable **Auto power off** and **Viewfinder off**, but `Display off` has no
+Disable setting (15 seconds through 30 minutes).
+
+Several Canon Basic power-save and delay experiments were rejected or stalled
+before their first marker. They are retained as explicitly archived evidence;
+they are **not** a solution and must not be copied to a camera card. See
+[POWERSAVE-INVESTIGATION.md](POWERSAVE-INVESTIGATION.md).
+
+The native-payload route is architecturally possible but has an unresolved
+bootstrap on M50 firmware 1.1.0: the local port can build `autoexec.bin`, but
+has no M50.110 boot-flag installer. See
+[NATIVE-PAYLOAD-FEASIBILITY.md](NATIVE-PAYLOAD-FEASIBILITY.md).
+
 ## Contents
 
 - `firmware-originals/` — local-only copies of the supplied Canon 1.1.0 firmware files; ignored by Git.
 - `M50-ROM0-00000000-00800000.bin` — local-only 8 MiB ROM region read directly from the camera; ignored by Git.
 - `test_hdmi_line_hold.m` — validated one-shot clean-HDMI script.
+- `test_hdmi_line_hold_trace.m` — validated trace variant; it confirmed the
+  HDMI routine returns before the display-off timeout.
+- `test_*powersave*.m`, `test_disable_powersave.m`, and `test_hdmi_line_active_*.m`
+  — rejected experimental probes, committed for provenance only; do not run.
 - `cbasic_examples/`, `d8_oracle/`, `magiclantern/` — source snapshots used for research.
 - `card-diagnostics-archive-2026-09-11/` — diagnostic outputs retained for provenance.
 - `EOS_DIGITAL-original-boot-sector.bin` and card manifests — card-preparation records.
