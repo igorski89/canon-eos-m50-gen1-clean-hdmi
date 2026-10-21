@@ -2,8 +2,8 @@
 
 Status: **validated on hardware 2026-10-21**, including `usb/clean-hdmi.sh`
 (M50 firmware 1.1.0, internal build `7.3.0 34(00)`, macOS, Apple Silicon).
-Reconnect after unplugging USB or power-cycling the camera mid-session has not
-been exercised yet.
+Power-cycling the camera mid-session was also validated: the launcher logged
+the loss, reconnected 4 s after power-on, and re-hid the AF square 6 s later.
 
 ## Result
 
