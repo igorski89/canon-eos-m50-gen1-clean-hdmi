@@ -24,6 +24,9 @@ CANON_VID = 0x04A9
 BACKEND = usb.backend.libusb1.get_backend(
     find_library=lambda _: "/opt/homebrew/lib/libusb-1.0.dylib")
 
+MUTE_DELAY = 5      # seconds after connect before the first overlay mute
+MUTE_INTERVAL = 30  # seconds between re-applied overlay mutes
+
 CMD, DATA, RESP = 1, 2, 3
 OK = 0x2001
 
@@ -136,16 +139,26 @@ def run_forever(keepalive):
             p.open()
             for code in (0x9114, 0x9115):  # SetRemoteMode 1, SetEventMode 1
                 p.transact(code, (1,))
-            for _ in range(3):
-                p.transact(0x9050)
-            rc, _, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc("FA_OSDMuteOn", []))
-            log(f"connected; remote mode on; FA_OSDMuteOn rc=0x{rc:04X}")
-            last_ka = time.time()
+            log("connected; remote mode on")
+            # FA_OSDMuteOn picks its target (HDMI vs panel) at call time, so a
+            # mute sent while the camera is still booting misses HDMI. Wait for
+            # live view to settle, then re-apply periodically to survive menu,
+            # playback and HDMI re-plug.
+            first_mute = time.time() + MUTE_DELAY
+            last_mute = last_ka = 0
             while True:
                 p.transact(0x9116)  # GetEvent
-                if keepalive and time.time() - last_ka >= keepalive:
+                now = time.time()
+                if now >= first_mute and now - last_mute >= MUTE_INTERVAL:
+                    for _ in range(3):
+                        p.transact(0x9050)
+                    rc, _, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc("FA_OSDMuteOn", []))
+                    if not last_mute or rc != OK:
+                        log(f"FA_OSDMuteOn rc=0x{rc:04X}")
+                    last_mute = now
+                if keepalive and now - last_ka >= keepalive:
                     p.transact(0x911D)  # KeepDeviceOn
-                    last_ka = time.time()
+                    last_ka = now
                 time.sleep(0.5)
         except (usb.core.USBError, SystemExit) as e:
             log(f"camera lost ({e}); waiting to reconnect")

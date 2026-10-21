@@ -1,9 +1,9 @@
 # Clean HDMI over USB (no SD-card script)
 
-Status: **validated on hardware 2026-10-21** (M50 firmware 1.1.0, internal
-build `7.3.0 34(00)`, macOS, Apple Silicon). The launcher's auto-reconnect
-loop (`run`) is assembled from the validated calls but has not yet had its own
-hardware run.
+Status: **validated on hardware 2026-10-21**, including `usb/clean-hdmi.sh`
+(M50 firmware 1.1.0, internal build `7.3.0 34(00)`, macOS, Apple Silicon).
+Reconnect after unplugging USB or power-cycling the camera mid-session has not
+been exercised yet.
 
 ## Result
 
@@ -26,9 +26,16 @@ keep-alive pings.
    overlay.
 
 The launcher stops macOS's `ptpcamerad`/`mscamerad-xpc`, opens a session,
-sends `SetRemoteMode 1` / `SetEventMode 1`, calls `FA_OSDMuteOn`, polls
-`GetEvent`, sends `KeepDeviceOn` every 60 s as extra margin, and repeats the
-whole sequence if the camera disconnects.
+sends `SetRemoteMode 1` / `SetEventMode 1`, waits 5 s, calls `FA_OSDMuteOn`
+and re-applies it every 30 s, polls `GetEvent`, sends `KeepDeviceOn` every
+60 s as extra margin, and repeats the whole sequence if the camera
+disconnects.
+
+The delay matters: when the script was started first and the camera powered
+on afterwards, a mute sent the moment USB came up returned `0x2001` but the AF
+square stayed on HDMI. `FA_OSDMuteOn` selects its display target when called,
+so it must run after live view and HDMI are up. Delayed, periodic re-muting
+fixed this on hardware.
 
 ## Findings
 
