@@ -8,3 +8,4 @@ M50-ROM*.bin
 EOS_DIGITAL-original-boot-sector.bin
 card-backup-verification.json
 card-diagnostics-archive-*/
+usb/.venv/

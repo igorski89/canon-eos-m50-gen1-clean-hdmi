@@ -2,6 +2,13 @@
 
 This repository documents a reversible Canon Basic method for removing the autofocus square from the EOS M50 firmware 1.1.0 HDMI feed while retaining live autofocus.
 
+## USB method (recommended)
+
+Over USB, no SD-card script is needed: `usb/clean-hdmi.sh` keeps the camera in
+PTP remote mode and calls Canon's registered `FA_OSDMuteOn` routine. The AF
+square disappears from HDMI and live view stays up past the `Display off`
+timeout. See [USB-CONTROL.md](USB-CONTROL.md).
+
 ## Validated result
 
 The camera's HDMI OSD layer can be muted at runtime with Canon's internal routines:
