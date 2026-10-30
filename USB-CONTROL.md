@@ -59,7 +59,7 @@ PTP encoding is untested on this camera. It was not tried because
 The MacroSilicon HDMI dongle ("USB Video") offers many 4:3 modes (640×480 up
 to 1600×1200) alongside 1920×1080, and scales the camera's 16:9 signal into
 whichever one an app selects, squeezing the image horizontally. QuickTime's
-`High` quality sometimes picks 1280×960; `Maximum` picks 1920×1080.
+`High` quality sometimes picks 1280×960; `Maximum` picks 1920×1080 but in the 5 fps uncompressed format (see below).
 
 The active format is shared by every app using the device, so
 `usb/capture-format.swift` sets it once for all of them (Zoom included):
@@ -76,6 +76,12 @@ renegotiate the format on their own: turning the camera off and on in web
 Zoom (Chrome) switched the dongle back to a squeezed 4:3 mode. When the size
 already matches, the tool exits without touching the device, so a running
 stream is not disturbed.
+
+"Matches" means size **and** frame rate. The dongle has two 1920×1080
+formats: `420v` (60/30/25/20/10 fps) and uncompressed `yuvs`, limited to
+5 fps by USB 2.0. QuickTime's `Maximum` quality selects `yuvs`, which makes
+the feed visibly laggy (measured 5 fps); restoring `420v` at 30 fps measured
+29–30 fps.
 
 ## Connection notes
 

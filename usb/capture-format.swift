@@ -37,24 +37,30 @@ guard wh.count == 2 else {
     exit(2)
 }
 
-// Already at the requested size: leave it alone so a running stream is not
-// disturbed (clean-hdmi.sh calls this every few seconds as a watchdog).
-let current = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
-if current.width == wh[0] && current.height == wh[1] {
+// The dongle's rates are inexact (e.g. 30.00003), so reuse the device's own
+// frame-rate range rather than constructing 1/fps, which it rejects.
+func rangeFor(_ f: AVCaptureDevice.Format) -> AVFrameRateRange? {
+    let d = CMVideoFormatDescriptionGetDimensions(f.formatDescription)
+    guard d.width == wh[0], d.height == wh[1] else { return nil }
+    return f.videoSupportedFrameRateRanges.first(where: { abs($0.maxFrameRate - fps) < 0.5 })
+}
+
+// Already at the requested size *and* rate: leave it alone so a running stream
+// is not disturbed (clean-hdmi.sh calls this every few seconds as a watchdog).
+// Size alone is not enough: the dongle also has an uncompressed 1920x1080
+// format limited to 5 fps, which QuickTime's "Maximum" quality selects.
+if let r = rangeFor(device.activeFormat),
+   abs(device.activeVideoMinFrameDuration.seconds - r.minFrameDuration.seconds) < 0.001 {
     print("unchanged: \(describe(device.activeFormat))")
     exit(0)
 }
 
-// The dongle's rates are inexact (e.g. 30.00003), so reuse the device's own
-// frame-rate range rather than constructing 1/fps, which it rejects.
 var match: (AVCaptureDevice.Format, AVFrameRateRange)?
 for f in device.formats {
-    let d = CMVideoFormatDescriptionGetDimensions(f.formatDescription)
-    guard d.width == wh[0], d.height == wh[1],
-          let r = f.videoSupportedFrameRateRanges.first(where: { abs($0.maxFrameRate - fps) < 0.5 })
-    else { continue }
-    match = (f, r)
-    break
+    if let r = rangeFor(f) {
+        match = (f, r)
+        break
+    }
 }
 guard let (format, range) = match else {
     FileHandle.standardError.write("Device has no \(size) @ \(fps) fps mode\n".data(using: .utf8)!)
