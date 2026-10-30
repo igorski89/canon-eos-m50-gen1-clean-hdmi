@@ -9,3 +9,4 @@ EOS_DIGITAL-original-boot-sector.bin
 card-backup-verification.json
 card-diagnostics-archive-*/
 usb/.venv/
+usb/capture-format

@@ -54,6 +54,25 @@ could register `0xE0538114` directly, but that needs a string parameter whose
 PTP encoding is untested on this camera. It was not tried because
 `FA_OSDMuteOn` already works.
 
+## Capture resolution
+
+The MacroSilicon HDMI dongle ("USB Video") offers many 4:3 modes (640×480 up
+to 1600×1200) alongside 1920×1080, and scales the camera's 16:9 signal into
+whichever one an app selects, squeezing the image horizontally. QuickTime's
+`High` quality sometimes picks 1280×960; `Maximum` picks 1920×1080.
+
+The active format is shared by every app using the device, so
+`usb/capture-format.swift` sets it once for all of them (Zoom included):
+
+```sh
+swift usb/capture-format.swift            # list modes and show the active one
+swift usb/capture-format.swift 1920x1080  # set 1080p (30 fps by default)
+```
+
+`clean-hdmi.sh` compiles this tool to `usb/capture-format` and applies
+`CAPTURE_FORMAT` (default `1920x1080`) on every camera connect, right after
+the first overlay mute.
+
 ## Connection notes
 
 - On the Apple USB-C Digital AV Multiport Adapter, only the **USB-A** port

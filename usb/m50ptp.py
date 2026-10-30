@@ -125,6 +125,16 @@ def release_from_macos():
                    stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
 
+def force_capture_format():
+    """Pin the HDMI capture dongle to CAPTURE_FORMAT (set by clean-hdmi.sh)."""
+    import os, subprocess
+    tool, size = os.environ.get("CAPTURE_FORMAT_BIN"), os.environ.get("CAPTURE_FORMAT")
+    if not tool or not size:
+        return
+    r = subprocess.run([tool, size], capture_output=True, text=True)
+    log((r.stdout or r.stderr).strip() or f"capture-format exited {r.returncode}")
+
+
 def run_forever(keepalive):
     """Wait for the camera, enter remote mode, hide the HDMI overlay, keep the
     session alive; on any disconnect, start over."""
@@ -155,6 +165,8 @@ def run_forever(keepalive):
                     rc, _, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc("FA_OSDMuteOn", []))
                     if not last_mute or rc != OK:
                         log(f"FA_OSDMuteOn rc=0x{rc:04X}")
+                    if not last_mute:
+                        force_capture_format()
                     last_mute = now
                 if keepalive and now - last_ka >= keepalive:
                     p.transact(0x911D)  # KeepDeviceOn
