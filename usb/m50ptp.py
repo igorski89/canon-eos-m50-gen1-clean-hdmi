@@ -26,6 +26,7 @@ BACKEND = usb.backend.libusb1.get_backend(
 
 MUTE_DELAY = 5      # seconds after connect before the first overlay mute
 MUTE_INTERVAL = 30  # seconds between re-applied overlay mutes
+FORMAT_INTERVAL = 5  # seconds between capture-format checks (apps like Chrome reset it)
 
 CMD, DATA, RESP = 1, 2, 3
 OK = 0x2001
@@ -132,7 +133,9 @@ def force_capture_format():
     if not tool or not size:
         return
     r = subprocess.run([tool, size], capture_output=True, text=True)
-    log((r.stdout or r.stderr).strip() or f"capture-format exited {r.returncode}")
+    out = (r.stdout or r.stderr).strip() or f"capture-format exited {r.returncode}"
+    if not out.startswith("unchanged"):
+        log(f"capture format reset: {out}")
 
 
 def run_forever(keepalive):
@@ -155,7 +158,7 @@ def run_forever(keepalive):
             # live view to settle, then re-apply periodically to survive menu,
             # playback and HDMI re-plug.
             first_mute = time.time() + MUTE_DELAY
-            last_mute = last_ka = 0
+            last_mute = last_ka = last_format = 0
             while True:
                 p.transact(0x9116)  # GetEvent
                 now = time.time()
@@ -165,9 +168,10 @@ def run_forever(keepalive):
                     rc, _, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc("FA_OSDMuteOn", []))
                     if not last_mute or rc != OK:
                         log(f"FA_OSDMuteOn rc=0x{rc:04X}")
-                    if not last_mute:
-                        force_capture_format()
                     last_mute = now
+                if now >= first_mute and now - last_format >= FORMAT_INTERVAL:
+                    force_capture_format()
+                    last_format = now
                 if keepalive and now - last_ka >= keepalive:
                     p.transact(0x911D)  # KeepDeviceOn
                     last_ka = now

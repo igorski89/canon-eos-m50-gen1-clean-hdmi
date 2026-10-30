@@ -69,9 +69,13 @@ swift usb/capture-format.swift            # list modes and show the active one
 swift usb/capture-format.swift 1920x1080  # set 1080p (30 fps by default)
 ```
 
-`clean-hdmi.sh` compiles this tool to `usb/capture-format` and applies
-`CAPTURE_FORMAT` (default `1920x1080`) on every camera connect, right after
-the first overlay mute.
+`clean-hdmi.sh` compiles this tool to `usb/capture-format` and checks the
+format every 5 s while the camera is connected, restoring `CAPTURE_FORMAT`
+(default `1920x1080`) only when it differs. This is needed because apps
+renegotiate the format on their own: turning the camera off and on in web
+Zoom (Chrome) switched the dongle back to a squeezed 4:3 mode. When the size
+already matches, the tool exits without touching the device, so a running
+stream is not disturbed.
 
 ## Connection notes
 

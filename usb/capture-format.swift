@@ -37,6 +37,14 @@ guard wh.count == 2 else {
     exit(2)
 }
 
+// Already at the requested size: leave it alone so a running stream is not
+// disturbed (clean-hdmi.sh calls this every few seconds as a watchdog).
+let current = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+if current.width == wh[0] && current.height == wh[1] {
+    print("unchanged: \(describe(device.activeFormat))")
+    exit(0)
+}
+
 // The dongle's rates are inexact (e.g. 30.00003), so reuse the device's own
 // frame-rate range rather than constructing 1/fps, which it rejects.
 var match: (AVCaptureDevice.Format, AVFrameRateRange)?
