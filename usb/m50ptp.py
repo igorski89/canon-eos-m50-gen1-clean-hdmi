@@ -10,7 +10,8 @@ Subcommands:
   enable                    send 0x9050 EnableEventProc x3, print responses
   evproc NAME [ARGS..] [-r] run named event procedure via 0x9052 (-r: fetch return)
   keepalive INTERVAL [N]    send 0x911D KeepDeviceOn every INTERVAL seconds
-  run [KEEPALIVE]           production: wait, remote mode, FA_OSDMuteOn, hold; auto-reconnect
+  run [KEEPALIVE]           production: wait, remote mode, HDMI overlay mute, hold; auto-reconnect
+  serve FIFO [KEEPALIVE]    remote-mode session driven by "send FIFO evproc NAME ARGS.. [-r]" lines
 """
 import struct
 import sys
@@ -138,6 +139,39 @@ def force_capture_format():
         log(f"capture format reset: {out}")
 
 
+LINE_MUTE_NAME = "m50_usb_line_on"  # registered at runtime; lost on power-off
+LINE_MUTE_ADDR = 0xE0538114 | 1    # DISP_MuteOnOSDLineVram (Thumb)
+MUTE_USER_ID = 0x1000
+NOT_REGISTERED = 0x201D
+
+
+def call_evproc(p, name, args):
+    for _ in range(3):
+        p.transact(0x9050)  # EnableEventProc
+    rc, _, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc(name, args))
+    return rc
+
+
+def mute_hdmi_overlay(p):
+    """Hide the HDMI AF overlay with the Line-only mute routine.
+
+    FA_OSDMuteOn reads the current display type and mutes the panel instead
+    of HDMI unless the type is one of five HDMI codes (e.g. while booting),
+    so call DISP_MuteOnOSDLineVram directly. It is not registered by name,
+    so register it once per camera boot (an unknown name returns 0x201D and
+    does not execute). Fall back to FA_OSDMuteOn if registration fails."""
+    rc = call_evproc(p, LINE_MUTE_NAME, [MUTE_USER_ID])
+    if rc == NOT_REGISTERED:
+        reg = call_evproc(p, "ExportToEventProcedure", [LINE_MUTE_NAME, LINE_MUTE_ADDR])
+        if reg == OK:
+            log(f"registered {LINE_MUTE_NAME} -> 0x{LINE_MUTE_ADDR:08X}")
+            rc = call_evproc(p, LINE_MUTE_NAME, [MUTE_USER_ID])
+        else:
+            log(f"ExportToEventProcedure rc=0x{reg:04X}; falling back to FA_OSDMuteOn")
+            return "FA_OSDMuteOn", call_evproc(p, "FA_OSDMuteOn", [])
+    return LINE_MUTE_NAME, rc
+
+
 def run_forever(keepalive):
     """Wait for the camera, enter remote mode, hide the HDMI overlay, keep the
     session alive; on any disconnect, start over."""
@@ -153,21 +187,17 @@ def run_forever(keepalive):
             for code in (0x9114, 0x9115):  # SetRemoteMode 1, SetEventMode 1
                 p.transact(code, (1,))
             log("connected; remote mode on")
-            # FA_OSDMuteOn picks its target (HDMI vs panel) at call time, so a
-            # mute sent while the camera is still booting misses HDMI. Wait for
-            # live view to settle, then re-apply periodically to survive menu,
-            # playback and HDMI re-plug.
+            # Wait for live view to settle, then re-apply periodically to
+            # survive menu, playback and HDMI re-plug.
             first_mute = time.time() + MUTE_DELAY
             last_mute = last_ka = last_format = 0
             while True:
                 p.transact(0x9116)  # GetEvent
                 now = time.time()
                 if now >= first_mute and now - last_mute >= MUTE_INTERVAL:
-                    for _ in range(3):
-                        p.transact(0x9050)
-                    rc, _, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc("FA_OSDMuteOn", []))
+                    name, rc = mute_hdmi_overlay(p)
                     if not last_mute or rc != OK:
-                        log(f"FA_OSDMuteOn rc=0x{rc:04X}")
+                        log(f"{name} rc=0x{rc:04X}")
                     last_mute = now
                 if now >= first_mute and now - last_format >= FORMAT_INTERVAL:
                     force_capture_format()
@@ -274,9 +304,13 @@ def main():
                     elif words[0] == "evproc" and len(words) > 1:
                         for _ in range(3):
                             p.transact(0x9050)
-                        args = [parse_arg(a) for a in words[2:]]
-                        rc, prm, _ = p.transact(0x9052, (0, 0), data_out=pack_evproc(words[1], args))
-                        print(f"{stamp} {words[1]} {args}: rc=0x{rc:04X} {prm}", flush=True)
+                        want_ret = "-r" in words
+                        args = [parse_arg(a) for a in words[2:] if a != "-r"]
+                        rc, prm, _ = p.transact(0x9052, (0, int(want_ret)), data_out=pack_evproc(words[1], args))
+                        print(f"{stamp} {words[1]} {args}: rc=0x{rc:04X} {[hex(x) for x in prm]}", flush=True)
+                        if want_ret and rc == OK:
+                            rc, prm, d = p.transact(0x9053, (0, 0, 1))
+                            print(f"{stamp}   return rc=0x{rc:04X} {[hex(x) for x in prm]} data={d.hex()}", flush=True)
                     elif words[0] == "quit":
                         return
         elif cmd == "enable":
