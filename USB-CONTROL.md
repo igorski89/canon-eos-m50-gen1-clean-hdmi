@@ -28,7 +28,7 @@ keep-alive pings.
    overlay.
 
 The launcher stops macOS's `ptpcamerad`/`mscamerad-xpc`, opens a session,
-sends `SetRemoteMode 1` / `SetEventMode 1`, waits 5 s, mutes the HDMI overlay
+sends `SetRemoteMode 0x15` / `SetEventMode 1`, waits 5 s, mutes the HDMI overlay
 and re-applies the mute every 30 s, polls `GetEvent`, sends `KeepDeviceOn`
 every 60 s as extra margin, and repeats the whole sequence if the camera
 disconnects.
@@ -63,6 +63,7 @@ GUILock internals, which are not registered by name.
 | `FA_OSDMuteOn` / `FA_OSDMuteOff` | Registered; `0x2001`; hides/restores the HDMI AF square only when the display type is an HDMI code (see above) |
 | Plain session (or macOS `ptpcamerad`) | Camera shows the PC-connect laptop icon on HDMI instead of live view |
 | Remote-mode session | Live view returns on HDMI; rear LCD stays off while HDMI is connected |
+| `SetRemoteMode 1` vs `0x15` | Mode 1 restored live view in early sessions, but after one power cycle the camera stayed on the PC-connect screen (laptop icon; black once the overlay mute hid the icon) until `0x15`, the value libgphoto2 uses for EOS M bodies, was sent. With `0x15` the launcher brought back live view without the AF square after a cold power cycle |
 | `ExportToEventProcedure "m50_usb_line_on" 0xE0538115` | `0x2001`; afterwards `m50_usb_line_on 0x1000` hides and a matching `m50_usb_line_off` (`0xE053814F`) restores the AF square, 6/6 alternating calls correct over direct USB |
 | `Peek32 0x8E00` with return data | Executed, but fetching the return data (`0x9053`) timed out and left the camera's PTP side unresponsive until a battery pull; do not use |
 

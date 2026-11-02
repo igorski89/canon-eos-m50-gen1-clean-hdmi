@@ -29,6 +29,11 @@ MUTE_DELAY = 5      # seconds after connect before the first overlay mute
 MUTE_INTERVAL = 30  # seconds between re-applied overlay mutes
 FORMAT_INTERVAL = 5  # seconds between capture-format checks (apps like Chrome reset it)
 
+# libgphoto2 uses 0x15 for EOS M bodies. Mode 1 restored HDMI live view in
+# some sessions, but after one power cycle the camera stayed on the
+# PC-connect screen until 0x15 was sent.
+EOS_M_REMOTE_MODE = 0x15
+
 CMD, DATA, RESP = 1, 2, 3
 OK = 0x2001
 
@@ -184,8 +189,8 @@ def run_forever(keepalive):
             time.sleep(0.5)
             p = PTP()
             p.open()
-            for code in (0x9114, 0x9115):  # SetRemoteMode 1, SetEventMode 1
-                p.transact(code, (1,))
+            p.transact(0x9114, (EOS_M_REMOTE_MODE,))  # SetRemoteMode
+            p.transact(0x9115, (1,))                  # SetEventMode 1
             log("connected; remote mode on")
             # Wait for live view to settle, then re-apply periodically to
             # survive menu, playback and HDMI re-plug.
@@ -252,7 +257,7 @@ def main():
             # remote SECONDS [KEEPALIVE_INTERVAL]: EOS-Utility-style tethered session
             secs = float(sys.argv[2])
             ka = float(sys.argv[3]) if len(sys.argv) > 3 else 0
-            for code, prm, name in [(0x9114, (1,), "SetRemoteMode"), (0x9115, (1,), "SetEventMode")]:
+            for code, prm, name in [(0x9114, (EOS_M_REMOTE_MODE,), "SetRemoteMode"), (0x9115, (1,), "SetEventMode")]:
                 rc, _, _ = p.transact(code, prm)
                 print(f"{name}: rc=0x{rc:04X}", flush=True)
             start = last_ka = time.time()
@@ -271,7 +276,7 @@ def main():
             if not os.path.exists(fifo):
                 os.mkfifo(fifo)
             fd = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
-            for code, prm in [(0x9114, (1,)), (0x9115, (1,))]:
+            for code, prm in [(0x9114, (EOS_M_REMOTE_MODE,)), (0x9115, (1,))]:
                 p.transact(code, prm)
             ka = float(sys.argv[3]) if len(sys.argv) > 3 else 0
             print(f"serving (keepalive every {ka or 'never'}s)", flush=True)
@@ -311,6 +316,10 @@ def main():
                         if want_ret and rc == OK:
                             rc, prm, d = p.transact(0x9053, (0, 0, 1))
                             print(f"{stamp}   return rc=0x{rc:04X} {[hex(x) for x in prm]} data={d.hex()}", flush=True)
+                    elif words[0] == "op" and len(words) > 1:
+                        # op CODE [PARAMS..]: raw no-data PTP operation
+                        rc, prm, _ = p.transact(int(words[1], 0), tuple(int(w, 0) for w in words[2:]))
+                        print(f"{stamp} op {words[1]} {words[2:]}: rc=0x{rc:04X} {[hex(x) for x in prm]}", flush=True)
                     elif words[0] == "quit":
                         return
         elif cmd == "enable":
